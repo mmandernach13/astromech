@@ -6,7 +6,7 @@ Astromech is a Python-based project for controlling a robotic droid, designed to
 This repository, maintained by [mmandenach13](https://github.com/mmandenach13), is located at [github.com/mmandenach13/astromech](https://github.com/mmandenach13/astromech).
 
 ## Features
-- **Movement Control**: Drive and rotate the droid using continuous servos for wheels and standard servos for shoulder mechanisms.
+- **Movement Control**: Drive and rotate the droid using DC motors for wheels and standard servos for shoulder mechanisms.
 - **PID Heading Control**: Maintains a specified heading using a PID controller with data from an MPU6050 sensor.
 - **Obstacle Detection**: Uses ultrasonic distance sensors to detect obstacles and adjust the droid's behavior.
 - **Modular Design**: Organized into classes (`Droid`, `MovementServos`, `MPU`, `SensorArray`) for easy maintenance and extensibility.
@@ -16,15 +16,15 @@ This repository, maintained by [mmandenach13](https://github.com/mmandenach13), 
 - MPU6050 gyroscope/accelerometer
 - Ultrasonic distance sensors (e.g., HC-SR04, with trigger and echo pins)
 - Adafruit PCA9685 Servo Controller
-- Continuous servos for wheels
+- DC motors for wheels (I used a hacked Roomba)
 - Standard servos for shoulder mechanisms
-- Appropriate power supply and wiring for servos and sensors
+- Appropriate power supply and wiring for components
 
 ## Software Requirements
 See `requirements.txt` for Python dependencies. Key libraries include:
 - `adafruit-circuitpython-servokit`
 - `smbus`
-- `RPi.GPIO`
+- `gpiozero`
 
 ## Installation
 1. **Clone the Repository**:
@@ -47,14 +47,15 @@ See `requirements.txt` for Python dependencies. Key libraries include:
 4. **Configure Hardware**:
    - Connect the MPU6050 to the Raspberry Pi I2C pins.
    - Connect ultrasonic sensors to the specified GPIO pins (left: 22/18, center: 17/27, right: 23/24).
-   - Connect servos to the Adafruit PCA9685 channels (wheels: 0, 2; shoulders: 1, 3).
+   - Connect servos to the Adafruit PCA9685 channels (shoulders: 0, 1).
+   - Connect motor driver pins to 7, 8, 9, and 10 for wheel control.
 
 ## Usage
 1. **Run the Main Droid Program**:
    ```bash
    python3 droid.py
    ```
-   The droid will move forward while maintaining a heading (0° or 180°, alternating), stop when an obstacle is closer than 20 cm, turn 180°, and continue. Press `Ctrl+C` to stop.
+   The droid will move forward while maintaining a heading (0° or 180°, alternating), stop when an obstacle is closer than 40 cm, turn 180°, and continue. Press `Ctrl+C` to stop.
 
 2. **Test Individual Components**:
    - **Servo Test**:
@@ -78,7 +79,7 @@ See `requirements.txt` for Python dependencies. Key libraries include:
 ## Notes
 - Ensure proper GPIO cleanup by handling `KeyboardInterrupt` (Ctrl+C) to reset servos and GPIO pins.
 - The left ultrasonic sensor is currently non-functional (returns -1 in `SensorArray.read_all()`).
-- Adjust PID constants (`kp`, `ki`, `kd`) in `droid.py` for better heading control if needed.
+- Adjust PID constants (`kp`, `ki`, `kd`) or motor bias in `droid.py` for better heading control if needed.
 - The shoulder servo range is limited to ±30° to prevent damage.
 
 ## Contributing
