@@ -1,8 +1,7 @@
 import smbus
 import time
-import RPi.GPIO as GPIO
-
-GPIO.setmode(GPIO.BCM)
+from gpiozero import DistanceSensor
+from gpiozero.pins.pigpio import PiGPIOFactory
 
 i2c = smbus.SMBus(1)
 
@@ -37,7 +36,6 @@ class MPU:
         self.gyro_y = 0.0
         self.gyro_z = 0.0
 
-        # to track the amount the droid has rotated
         self.heading = 0.0
         self.last_time = time.time()
 
@@ -70,19 +68,19 @@ class MPU:
         self.gyro_y = self.read_one(GYRO_Y_H)
         self.gyro_z = self.read_one(GYRO_Z_H)
 
-    def update_heading(self):
+    def update_heading(self, normalize_heading=False):
         now = time.time()
         dt = now - self.last_time
 
         self.read_gyro()
 
-        if abs(self.gyro_z) < 1.28:
+        if abs(self.gyro_z) < 1.6:
             data = 0.0
         else:
             data = self.gyro_z
 
         dh = data * dt       # heading change
-        self.heading += dh 
+        self.heading += dh
 
         self.last_time = now
 
@@ -94,78 +92,41 @@ class MPU:
         self.heading = 0.0
         self.last_time = time.time()
 
-
-class DistanceSensor:
-    def __init__(self, trigger_pin, echo_pin):
-        self.trigger_pin = trigger_pin
-        self.echo_pin = echo_pin 
-
-        GPIO.setup(trigger_pin, GPIO.OUT)
-        GPIO.setup(echo_pin, GPIO.IN)
-        GPIO.output(trigger_pin, False)
-
-    def get_reading(self, timeout=0.03):
-        """ get distance in cm """
-        GPIO.output(self.trigger_pin, True)
-        time.sleep(0.00001) # 10us pulse to start
-        GPIO.output(self.trigger_pin, False)
-
-        start = time.time()
-        pulse_start = start
-        pulse_end = start
-        timeout_time = start + timeout
-
-        while GPIO.input(self.echo_pin) == 0:
-            pulse_start = time.time()
-            if pulse_start > timeout_time:
-                return -1
-
-        while GPIO.input(self.echo_pin) == 1:
-            pulse_end = time.time()
-            if pulse_end > timeout_time:
-                return -1
-
-
-        elapsed = pulse_end - pulse_start
-
-        distance = elapsed * 34300 # speed of sound in cm/s
-        distance = distance / 2
-
-        return round(distance, 1)
-
 class SensorArray:
     def __init__(self, left_trig, left_echo, center_trig, center_echo, right_trig, right_echo):
-        self.left = DistanceSensor(left_trig, left_echo)
-        self.center = DistanceSensor(center_trig, center_echo)
-        self.right = DistanceSensor(right_trig, right_echo)
+        max_dist = 3
+        factory = PiGPIOFactory()
+        self.left = DistanceSensor(trigger=left_trig, echo=left_echo, max_distance=max_dist, pin_factory=factory)
+        self.center = DistanceSensor(trigger=center_trig, echo=center_echo, max_distance=max_dist, pin_factory=factory)
+        self.right = DistanceSensor(trigger=right_trig, echo=right_echo, max_distance=max_dist, pin_factory=factory)
 
     def read_all(self):
         return {
-            'left'   : -1,                            # sensor isn't working...
-            'center' : self.center.get_reading(),
-            'right'  : self.right.get_reading()
+            'left'   : self.left.distance * 100.0,                         
+            'center' : self.center.distance * 100.0,
+            'right'  : self.right.distance * 100.0
         }
 
 
 if __name__ == "__main__":
     mpu = MPU()
-    dist_sensor = DistanceSensor(trigger_pin=22, echo_pin=18)
+    dist_sensor = SensorArray(left_trig=18, left_echo=22,
+                              center_trig=17, center_echo=27,
+                              right_trig=23, right_echo=24)
 
     try:
         while True:
             #mpu.read_gyro()
             #print(f"Gx = {mpu.gyro_x:.2f}, \tGy = {mpu.gyro_y:.2f}, \tGz = {mpu.gyro_z:.2f}\n")
 
-            distance = dist_sensor.get_reading()
+            r_distance = dist_sensor.right.distance * 100
+            c_distance = dist_sensor.center.distance * 100
 
-            if distance > 0:
-                print(f"distance: {distance}cm")
-            else:
-                print("no reading")
+            
+            print(f"center: {c_distance:6.2f}, right: {r_distance:6.2f}")
 
             time.sleep(1)
     except KeyboardInterrupt:
-        GPIO.cleanup()
         print("\nended successfully")
 
 
