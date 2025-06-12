@@ -27,7 +27,7 @@ class MPU:
         i2c.write_byte_data(MPU_ADDR, CONFIG, 0)
         i2c.write_byte_data(MPU_ADDR, GYRO_CONFIG, 0)
             
-        #places to store readings
+        # places to store readings
         self.acc_x = 0.0
         self.acc_y = 0.0
         self.acc_z = 0.0
@@ -36,11 +36,12 @@ class MPU:
         self.gyro_y = 0.0
         self.gyro_z = 0.0
 
+        # heading monitoring
         self.heading = 0.0
         self.last_time = time.time()
-
-    # returns acc or gyro data in g or deg/s respectively 
+ 
     def read_one(self, addr):
+        """ reads one of the MPU addresses """
         high = i2c.read_byte_data(MPU_ADDR, addr)
         low = i2c.read_byte_data(MPU_ADDR, addr+1)
 
@@ -49,10 +50,10 @@ class MPU:
         if raw > 32767:
             raw -= 65536
 
-        if addr in [0x3B, 0x3D, 0x3F]:     # acc reading
-            data = raw / 16384.0
+        if addr in [0x3B, 0x3D, 0x3F]:     # accelerometer reading
+            data = raw / 16384.0           # scale factor for acc (g)
         elif addr in [0x43, 0x45, 0x47]:   # gyro reading
-            data = raw / 131.0
+            data = raw / 131.0             # gyro scale factor (deg/s)
         else:
             data = 0.0
 
@@ -101,6 +102,7 @@ class SensorArray:
         self.right = DistanceSensor(trigger=right_trig, echo=right_echo, max_distance=max_dist, pin_factory=factory)
 
     def read_all(self):
+        """ reads all distance sensors in meters and returns them in cm """
         return {
             'left'   : self.left.distance * 100.0,                         
             'center' : self.center.distance * 100.0,

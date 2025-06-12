@@ -56,7 +56,14 @@ class Droid:
         self.current_heading = self.normalize_heading(self.mpu.get_heading())
 
     def maintain_heading(self, speed, tolerance=0.05, reset_pid=False):
-        """ drive in specified direction monitored by a PID controller """
+        """ drive on the target heading
+
+            param: speed= drive base speed
+                   tolerance= how far off heading returns true
+                   reset_pid= resets PID state (use if doing a new maneuver)
+
+            return: bool= true if on course
+        """
         if reset_pid:
             self.reset_pid()
 
@@ -110,7 +117,15 @@ class Droid:
         return abs(heading_error) < tolerance
 
     def turn_deg(self, relative_deg, turn_speed=0.5, tolerance=1.0, timeout=10.0):
-        """ turn to specified heading relative to current """
+        """ turn the robot a specified number of degrees 
+
+            param: relative_deg= amount to turn relative to robot's current heading
+                   turn_speed= speed of turn (duh)
+                   tolerance= how accurate the turn must be before being considered a success
+                   timeout= time to reach desired turn before quitting
+
+            return: bool= if turn was executed successfully
+        """
         relative_deg = max(-180, min(180, relative_deg))
 
         self.update_heading()
@@ -130,9 +145,9 @@ class Droid:
                 return True
 
             if heading_error > 0: 
-                self.movement.rotate(turn_speed, 'CCW')
+                self.movement.turn(turn_speed, 'CCW')
             else:
-                self.movement.rotate(turn_speed, 'CW')
+                self.movement.turn(turn_speed, 'CW')
 
             time.sleep(0.05)
 
